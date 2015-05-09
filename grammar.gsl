@@ -1,0 +1,16 @@
+CITY [
+	alexandria
+	aswan
+	cairo
+	giza
+	luxor
+	minya
+	red sea
+	suez
+]
+
+CLASS [
+	[(first ?class) dtmf-1] {<tclass "first">}
+	[(second ?class) dtmf-2] {<tclass "second">}
+]
+

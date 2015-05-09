@@ -1,0 +1,205 @@
+<?xml version="1.0"?>
+<vxml version="2.1" application="main.xml" >
+  <form id="find">
+    <field name="know_id" type="boolean">
+      <prompt>Do you know the trip number?</prompt>
+      <filled>
+        <if cond="!know_id" >
+          <goto next="#search" />
+        </if>
+      </filled>
+    </field>
+    
+    <field name="trip_id" type="digits?length=3">
+      <prompt>Please say or enter the 3-digit trip number.</prompt>
+      <filled>
+        <var name="trip" expr="getTrip(trip_id)" />
+        <if cond="trip != null">
+          <prompt>
+            Trip number <say-as interpret-as="number" format="digits"><value expr="trip.id" /></say-as>, 
+            departs from <value expr="trip.from" /> at <say-as interpret-as="time" format="hm"><value expr="minutesToTime(trip.departure%(24*60))" /></say-as>, 
+            and arrives at <value expr="trip.to" /> at <say-as interpret-as="time" format="hm"><value expr="minutesToTime(trip.arrival%(24*60))" /></say-as>. 
+            Traveling duration is <value expr="minutesToDuration(trip.arrival - trip.departure)" />. 
+            Seat cost in first class is <value expr="sayPrice(getPrice(trip,true))" />. Seat cost in second class is <value expr="sayPrice(getPrice(trip,false))" />.
+          </prompt>
+
+        <else />
+          <prompt>Sorry, the trip number you <value expr="trip_id$.inputmode=='dtmf'?'entered':'said'" /> is invalid.</prompt>
+        </if>
+        <return namelist="trip" />
+      </filled>
+    </field>
+  </form>
+
+  <form id="search">
+    <link next="#search">
+      <grammar type="text/gsl"> [(start over)~0.05]</grammar>
+    </link>
+    
+    <catch event="return">
+      <var name="type" expr="null" /> 
+      <return namelist="type"/>
+    </catch>
+    
+<!--    <link event="return">-->
+<!--      <grammar type="text/gsl"> [return]</grammar>-->
+<!--    </link>-->
+    
+    <field name="search_by">
+      <prompt>Would you like to search by departure time or arrival time.</prompt>
+      <grammar type="text/gsl">
+      <![CDATA[ [([departure {<search_by "departure">} arrival {<search_by "arrival">}] ?time) dtmf-1 {<search_by "departure">} dtmf-2 {<search_by "arrival">}] ]]>
+      </grammar>
+      <nomatch>
+        <prompt>Sorry, I couldn't understand what you said. Please say departure or arrival. You can also press 1 for departure, or 2 for arrival.</prompt>
+        <reprompt/>
+      </nomatch>
+    </field>
+    
+    <field name="departure_city">
+      <grammar type="text/gsl" src="grammar.gsl#CITY" />
+      <grammar type="text/gsl">[ list ]</grammar>
+      <prompt>What is the departure city?</prompt>
+      <nomatch>
+        <prompt>Sorry, I couldn't understand what you said. Please say the name of a city, or say list to hear the names of available cities.</prompt>
+        <reprompt/>
+      </nomatch>
+      <filled>
+        <if cond="departure_city == 'list'">
+          <prompt>Available cities are:
+				alexandria,
+				aswan,
+				cairo,
+				giza,
+				luxor,
+				minya,
+				red sea, and 
+				suez.
+          </prompt>
+          <clear namelist="departure_city" />
+        </if>
+        <if cond="departure_city$.confidence &lt; 0.5">
+          <assign name="pconfirm_dep" expr="true" />
+        <else />
+          <assign name="pconfirm_dep" expr="false" />
+        </if>
+      </filled>
+    </field>
+    
+    <field name="confirm_departure" cond="pconfirm_dep" type="boolean">
+      <prompt>Did you say <value expr="departure_city$.utterance" />?</prompt>
+      <filled>
+        <if cond="!confirm_departure">
+          <clear namelist="departure_city" />
+        </if>
+      </filled>
+    </field>
+    
+    <field name="arrival_city">
+      <grammar type="text/gsl" src="grammar.gsl#CITY" />
+      <grammar type="text/gsl">[ list ]</grammar>
+      <prompt>What is the arrival city?</prompt>
+      <nomatch>
+        <prompt>Sorry, I couldn't understand what you said. Please say the name of a city, or say list to hear the names of available cities.</prompt>
+        <reprompt/>
+      </nomatch>
+      <filled>
+        <if cond="arrival_city == 'list'">
+          <prompt>Available cities are:
+				alexandria,
+				aswan,
+				cairo,
+				giza,
+				luxor,
+				minya,
+				red sea, and 
+				suez
+          </prompt>
+          <clear namelist="arrival_city" />
+        </if>
+        <if cond="arrival_city$.confidence &lt; 0.5">
+          <assign name="pconfirm_arr" expr="true" />
+        <else />
+          <assign name="pconfirm_arr" expr="false" />
+        </if>
+
+      </filled>
+    </field>
+    
+    <field name="confirm_arrival" cond="pconfirm_arr" type="boolean">
+      <prompt>Did you say <value expr="arrival_city$.utterance" />?</prompt>
+      <filled>
+        <if cond="!confirm_arrival">
+          <clear namelist="arrival_city" />
+        </if>
+      </filled>
+    </field>
+    
+    <field name="time" type="time">
+      <prompt>What is the <value expr="search_by" /> time?</prompt>
+      <filled>
+        <if cond="time$.confidence &lt; 0.6">
+          <assign name="pconfirm_time" expr="true" />
+        <else />
+          <assign name="pconfirm_time" expr="false" />
+        </if>
+      </filled>
+    </field>
+    
+    <field name="confirm_time" cond="pconfirm_time" type="boolean">
+      <prompt>Did you say <value expr="time$.utterance" />?</prompt>
+      <filled>
+        <if cond="!confirm_time">
+          <clear namelist="time" />
+        </if>
+      </filled>
+    </field>
+
+    <field name="confirm" type="boolean">
+      <prompt>You are looking for a trip from <value expr="departure_city$.utterance" /> to <value expr="arrival_city$.utterance" />, 
+        <value expr="search_by == 'departure'?('departing from '+departure_city$.utterance):('arriving at'+arrival_city$.utterance)" /> at <value expr="time$.utterance" />.
+        Is this correct?
+      </prompt>
+      <filled>
+        <if cond="!confirm">
+          <clear namelist="search_by departure_city arrival_city time confirm" />
+          <prompt>Let's start over.</prompt>
+          <goto next="#search" />
+        </if>
+      </filled>
+    </field>
+    <var name="trip" />
+    <filled namelist="search_by departure_city arrival_city time confirm">
+      <prompt>Searching for trip.</prompt>
+      <assign name="trip" expr="closestMatch(departure_city, arrival_city, search_by == 'departure', synthToMinutes(time))" />
+      <if cond="trip != null">
+        <prompt>
+          Trip number <say-as interpret-as="number" format="digits"><value expr="trip.id" /></say-as>, 
+          departs from <value expr="trip.from" /> at <say-as interpret-as="time" format="hm"><value expr="minutesToTime(trip.departure%(24*60))" /></say-as>, 
+          and arrives at <value expr="trip.to" /> at <say-as interpret-as="time" format="hm"><value expr="minutesToTime(trip.arrival%(24*60))" /></say-as>. 
+          Traveling duration is <value expr="minutesToDuration(trip.arrival - trip.departure)" />. 
+          Seat cost in first class is <value expr="sayPrice(getPrice(trip,true))" />. Seat cost in second class is <value expr="sayPrice(getPrice(trip,false))" />.
+        </prompt>
+
+      <else />
+        <prompt>Sorry, your search didn't return any results.</prompt>
+      </if>
+      <return namelist="trip" />
+    </filled>
+
+  </form>
+  
+<!--  <form id="say_trip">-->
+<!--    <var name="trip" />-->
+<!--    <block>-->
+<!--      <prompt>-->
+<!--        Trip number <say-as interpret-as="number" format="digits"><value expr="trip.id" /></say-as>, -->
+<!--        departs from <value expr="trip.from" /> at <say-as interpret-as="time" format="hm"><value expr="minutesToTime(trip.departure%(24*60))" /></say-as>, -->
+<!--        and arrives at <value expr="trip.to" /> at <say-as interpret-as="time" format="hm"><value expr="minutesToTime(trip.arrival%(24*60))" /></say-as>. -->
+<!--        Traveling duration is <value expr="minutesToDuration(trip.arrival - trip.departure)" />. -->
+<!--        Seat cost in first class is <value expr="sayPrice(getPrice(trip,true))" />. Seat cost in second class is <value expr="sayPrice(getPrice(trip,false))" />.-->
+<!--      </prompt>-->
+<!--    </block>-->
+<!--  </form>-->
+  
+</vxml>

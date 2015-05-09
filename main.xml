@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<vxml version="2.1">
+  <script src="trips.js" />
+  <script src="functions.js" />
+  
+  <link next="#bye">
+    <grammar type="text/gsl"> [(?good bye)~0.02] </grammar>
+  </link>
+
+  <link next="#main_menu">
+    <grammar type="text/gsl"> [[(main ?menu) begin]~0.05] </grammar>
+  </link>
+
+  <menu id="main_menu">
+      <prompt><break time="1500" /></prompt>
+      <prompt>Welcome to GUC train reservation system.</prompt>
+      <prompt>For reservations, say "reservation", or press 1.</prompt>
+      <prompt>To find a trip, say "find", or press 2.</prompt>
+      <choice dtmf="1" next="reservation.xml">reservation</choice>
+      <choice dtmf="2" next="#find">find</choice>
+<!--    <subdialog name="tsearch" src="search.xml">-->
+<!--      <filled>-->
+<!--        <if cond="tsearch.trip != null">-->
+<!--          <prompt>Trip is not null.</prompt>-->
+<!--          <var name="say" expr="sayTrip(tsearch.trip)" />-->
+<!--          <log expr="say" />-->
+<!--          <prompt><value expr="say" /></prompt>-->
+<!--        </if>-->
+<!--      </filled>-->
+<!--    </subdialog>-->
+  </menu>
+  
+  <form id="find">
+    <subdialog src="search.xml">
+      <filled>
+        <goto next="#bye" />
+      </filled>
+    </subdialog>
+  </form>
+  
+  <form id="bye">
+    <block>
+      <prompt>Thank you for calling. Good bye! </prompt>
+    </block>
+  </form>
+</vxml>

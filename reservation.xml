@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<vxml version="2.1" application="main.xml" >
+  <var name="total" expr="0" />
+  <form id="reservation">
+    <subdialog name="search" src="search.xml">
+      <filled>
+        <if cond="search.trip == null">
+          <goto next="#new_reservation" />
+        </if>
+      </filled>
+    </subdialog>
+    
+    <field name="tclass">
+      <grammar type="text/gsl" src="grammar.gsl#CLASS" />
+      <prompt>In which class would you like to travel?</prompt>
+    </field>
+    
+    <field name="nseats" type="number">
+      <prompt>Please say or enter the number of seats you would like to reserve.</prompt>
+    </field>
+    
+    <field name="confirm" type="boolean">
+      <prompt>You want to reserve <value expr="nseats" /> <value expr="tclass" /> class seats, in trip <say-as interpret-as="number" format="digits" ><value expr="search.trip.id" /></say-as>, from <value expr="search.trip.from" /> to <value expr="search.trip.to" />. The cost of the reservation is <value expr="sayPrice(calculateCost(search.trip,nseats,tclass=='first'))" />. Do you want to continue? </prompt>
+      <filled>
+        <if cond="!confirm">
+          <clear namelist="search class nseats confirm" />
+          <prompt>Let's start over.</prompt>
+          <goto next="#reservation" />
+        <else />
+          <assign name="total" expr="total + calculateCost(search.trip,nseats,tclass=='first')" />
+          <prompt>Reservation complete.</prompt>
+          <prompt>You current total is <value expr="sayPrice(total)" />.</prompt>
+          <goto next="#new_reservation" />
+        </if>
+      </filled>
+    </field>
+    
+  </form>
+  
+  <form id="new_reservation">
+    <field name="confirm" type="boolean">
+      <prompt>Would you like to reserve another trip?</prompt>
+      <filled>
+        <if cond="confirm">
+          <goto next="#reservation" />
+        <else />
+          <prompt>Your total is <value expr="sayPrice(total)" />.</prompt>
+          <goto next="main.xml#bye" />
+        </if>
+      </filled>
+    </field>
+  </form>
+</vxml>
+
